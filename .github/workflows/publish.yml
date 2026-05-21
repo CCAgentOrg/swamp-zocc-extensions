@@ -52,8 +52,9 @@ jobs:
             echo -e "$CHANGED" | sort -u > /tmp/changed_dirs.txt
             echo "Changed extensions:"
             cat /tmp/changed_dirs.txt
-            echo "changed=$(cat /tmp/changed_dirs.txt)" >> "$GITHUB_OUTPUT"
-          fi
+            echo "changed<<EOF" >> "$GITHUB_OUTPUT"
+            cat /tmp/changed_dirs.txt >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish extensions
