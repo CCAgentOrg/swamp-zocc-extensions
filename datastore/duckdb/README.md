@@ -4,14 +4,15 @@ DuckDB integration for swamp — query model + embedded datastore backend.
 
 ## Required Tools
 
-- `duckdb` CLI (https://duckdb.org/) — install via your package manager or `curl https://shell.duckdb.org/install.sh | sh`
+- `duckdb` CLI (https://duckdb.org/) — install via your package manager or
+  `curl https://shell.duckdb.org/install.sh | sh`
 
 ## Extension Components
 
-| Component | Type | Description |
-|-----------|------|-------------|
-| `@zocc/duckdb` | Model | SQL query methods (list_tables, query, summarize, import_data, export_data) |
-| `@zocc/duckdb-datastore` | Datastore | Swamp runtime storage backend using DuckDB |
+| Component                | Type      | Description                                                                 |
+| ------------------------ | --------- | --------------------------------------------------------------------------- |
+| `@zocc/duckdb`           | Model     | SQL query methods (list_tables, query, summarize, import_data, export_data) |
+| `@zocc/duckdb-datastore` | Datastore | Swamp runtime storage backend using DuckDB                                  |
 
 ## Quick Start
 
@@ -53,7 +54,8 @@ swamp model method run mydb summarize \
 
 ### `import_data`
 
-Load CSV, JSON, NDJSON, or Parquet files into a DuckDB table. Supports both local files and HTTP URLs.
+Load CSV, JSON, NDJSON, or Parquet files into a DuckDB table. Supports both
+local files and HTTP URLs.
 
 ```bash
 # Import from local CSV
@@ -80,7 +82,8 @@ swamp model method run mydb import_data \
   --input create_table=false
 ```
 
-**Supported formats:** `csv`, `json`, `ndjson` (JSON Lines), `parquet`, `auto` (detect from extension)
+**Supported formats:** `csv`, `json`, `ndjson` (JSON Lines), `parquet`, `auto`
+(detect from extension)
 
 ### `export_data`
 
@@ -106,7 +109,8 @@ swamp model method run mydb export_data \
   --input destination=/output/data.parquet
 ```
 
-**Supported formats:** `csv`, `json`, `parquet`, `auto` (detect from destination extension)
+**Supported formats:** `csv`, `json`, `parquet`, `auto` (detect from destination
+extension)
 
 ## Datastore Usage
 
@@ -159,15 +163,17 @@ models:
 
 ## Known Flaws {#openflaw}
 
-This extension ships under the [OpenFlaw Manifesto](https://ccagentorg.github.io/OpenFlaw/): *Don't hide your flaws. Ship anyway.*
+This extension ships under the
+[OpenFlaw Manifesto](https://ccagentorg.github.io/OpenFlaw/): _Don't hide your
+flaws. Ship anyway._
 
-| Flaw | Impact | Mitigation |
-|------|--------|------------|
-| Subprocess overhead — every query spawns `duckdb` CLI | ~50-100ms latency per call | Use the datastore backend for repeated operations; batch queries in SQL |
-| No connection pooling | Concurrent queries serialize through CLI invocations | Design workflows to chain sequentially; DuckDB itself handles parallelism within a single query |
-| File-lock contention in datastore | Multi-process writes may retry on lock collision | Nonce-based locks auto-expire after 5s; retries are transparent |
-| Large result sets truncated in model output | `limit=0` (unlimited) can OOM on huge tables | Always set a sensible limit; use `export_data` for full dumps |
-| No in-process DuckDB — requires CLI binary | Fails if `duckdb` not on PATH | Documented in Required Tools; clear error message from the model |
+| Flaw                                                  | Impact                                               | Mitigation                                                                                      |
+| ----------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Subprocess overhead — every query spawns `duckdb` CLI | ~50-100ms latency per call                           | Use the datastore backend for repeated operations; batch queries in SQL                         |
+| No connection pooling                                 | Concurrent queries serialize through CLI invocations | Design workflows to chain sequentially; DuckDB itself handles parallelism within a single query |
+| File-lock contention in datastore                     | Multi-process writes may retry on lock collision     | Nonce-based locks auto-expire after 5s; retries are transparent                                 |
+| Large result sets truncated in model output           | `limit=0` (unlimited) can OOM on huge tables         | Always set a sensible limit; use `export_data` for full dumps                                   |
+| No in-process DuckDB — requires CLI binary            | Fails if `duckdb` not on PATH                        | Documented in Required Tools; clear error message from the model                                |
 
 > Perfection is an illusion. Utility through honesty is the goal.
 

@@ -24,7 +24,6 @@ jobs:
           api-key: ${{ secrets.SWAMP_PUBLISH_TOKEN }}
       - name: Publish extensions
         run: |
-          # Determine which extensions to publish
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             MANIFESTS=$(git ls-files '*/*/manifest.yaml')
           elif git rev-parse HEAD~1 &>/dev/null; then

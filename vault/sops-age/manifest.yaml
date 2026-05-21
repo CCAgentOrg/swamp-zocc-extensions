@@ -1,5 +1,5 @@
 manifestVersion: 1
-name: '@zocc/sops-age'
+name: "@zocc/sops-age"
 version: 2026.05.21.1
 description: >
   SOPS + age vault for swamp: encrypt secrets at rest with AES-256-GCM via
@@ -44,7 +44,7 @@ description: >
   - `sops` CLI (https://github.com/mozilla/sops)
   - `age` CLI (https://github.com/FiloSottile/age)
 
-repository: 'https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/vault/sops-age'
+repository: "https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/vault/sops-age"
 models: []
 workflows: []
 vaults:

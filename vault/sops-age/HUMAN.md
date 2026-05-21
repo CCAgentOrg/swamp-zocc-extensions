@@ -4,9 +4,16 @@
 
 ## TL;DR
 
-This is a **Swamp vault extension** that encrypts your secrets using [SOPS](https://github.com/mozilla/sops) + [age](https://github.com/FiloSottile/age). Secrets live as an encrypted JSON file on disk — no database, no server, no SaaS. You manage them through the `swamp vault` CLI or the Zo Space dashboard at `cashlessconsumer.zo.space/secrets`.
+This is a **Swamp vault extension** that encrypts your secrets using
+[SOPS](https://github.com/mozilla/sops) +
+[age](https://github.com/FiloSottile/age). Secrets live as an encrypted JSON
+file on disk — no database, no server, no SaaS. You manage them through the
+`swamp vault` CLI or the Zo Space dashboard at
+`cashlessconsumer.zo.space/secrets`.
 
-**Why?** Because `.env` files are plaintext, 1Password is SaaS, and HashiCorp Vault is overkill for a personal server. This gives you **AES-256-GCM encryption** with two open-source CLI tools and a single JSON file.
+**Why?** Because `.env` files are plaintext, 1Password is SaaS, and HashiCorp
+Vault is overkill for a personal server. This gives you **AES-256-GCM
+encryption** with two open-source CLI tools and a single JSON file.
 
 ---
 
@@ -47,7 +54,8 @@ Two tools, one file, zero network.
 
 ### 1. Age generates your encryption keypair
 
-[age](https://github.com/FiloSottile/age) is a modern file encryption tool (Go, single binary, no config).
+[age](https://github.com/FiloSottile/age) is a modern file encryption tool (Go,
+single binary, no config).
 
 ```bash
 age-keygen -o age.key
@@ -55,11 +63,13 @@ age-keygen -o age.key
 # Private key: age.key        ← guard this with your life
 ```
 
-Think of it as **SSH for files** — asymmetric encryption with dead-simple key management.
+Think of it as **SSH for files** — asymmetric encryption with dead-simple key
+management.
 
 ### 2. SOPS encrypts using that key
 
-[SOPS](https://github.com/mozilla/sops) (Secrets OPerationS) by Mozilla is an encrypted file editor. It:
+[SOPS](https://github.com/mozilla/sops) (Secrets OPerationS) by Mozilla is an
+encrypted file editor. It:
 
 1. Takes a JSON/YAML file
 2. Encrypts each value with AES-256-GCM
@@ -79,7 +89,8 @@ Think of it as **SSH for files** — asymmetric encryption with dead-simple key 
 
 ### 3. Swamp makes it a vault
 
-[Swamp](https://swamp.systeminit.com) is a workflow engine. This extension plugs SOPS+age into Swamp's vault system:
+[Swamp](https://swamp.systeminit.com) is a workflow engine. This extension plugs
+SOPS+age into Swamp's vault system:
 
 ```mermaid
 graph LR
@@ -146,7 +157,8 @@ Your secret value
 
 - **AES-256-GCM** — symmetric encryption for each value (fast, authenticated)
 - **age (X25519)** — asymmetric key wrap for the data key (your public key)
-- **Result** — only someone with `age.key` can decrypt. One file, fully portable.
+- **Result** — only someone with `age.key` can decrypt. One file, fully
+  portable.
 
 ---
 
@@ -219,23 +231,26 @@ ${{ vault.get(my-secrets, GEMINI_API_KEY) }}
 
 ## Key Decisions & Tradeoffs
 
-| Decision | Why |
-|---|---|
-| **age over GPG** | age is simpler, faster, no web-of-trust complexity |
-| **SOPS over raw age** | SOPS preserves JSON structure, encrypts values only (keys stay searchable) |
-| **JSON over YAML** | Universal compatibility, no indentation fragility |
-| **Single file over directory** | Easy to git-track, backup, sync across machines |
-| **CLI wrappers over Go SDK** | No build step, works with any SOPS/age version |
-| **No server** | Reduces attack surface — no daemon, no port, no network |
+| Decision                       | Why                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| **age over GPG**               | age is simpler, faster, no web-of-trust complexity                         |
+| **SOPS over raw age**          | SOPS preserves JSON structure, encrypts values only (keys stay searchable) |
+| **JSON over YAML**             | Universal compatibility, no indentation fragility                          |
+| **Single file over directory** | Easy to git-track, backup, sync across machines                            |
+| **CLI wrappers over Go SDK**   | No build step, works with any SOPS/age version                             |
+| **No server**                  | Reduces attack surface — no daemon, no port, no network                    |
 
 ---
 
 ## Security Notes
 
 - `age.key` is the **only** secret you must protect. Lose it → lose all secrets.
-- `secrets.json` is safe to commit (everything is `ENC[...]`), but `.gitignore` is included anyway.
-- The public key (`age.pub`) is safe to share — it's used for encryption, not decryption.
-- The Zo dashboard shows `first4••••last4` by default. Full values require explicit reveal and auto-hide after 30s.
+- `secrets.json` is safe to commit (everything is `ENC[...]`), but `.gitignore`
+  is included anyway.
+- The public key (`age.pub`) is safe to share — it's used for encryption, not
+  decryption.
+- The Zo dashboard shows `first4••••last4` by default. Full values require
+  explicit reveal and auto-hide after 30s.
 
 ---
 

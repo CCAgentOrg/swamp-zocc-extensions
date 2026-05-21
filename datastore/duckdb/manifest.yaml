@@ -1,5 +1,5 @@
 manifestVersion: 1
-name: '@zocc/duckdb'
+name: "@zocc/duckdb"
 version: 2026.05.21.7
 paths:
   base: manifest
@@ -40,7 +40,7 @@ description: >
   ## Required Tools
 
   - `duckdb` CLI (https://duckdb.org/)
-repository: 'https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/datastore/duckdb'
+repository: "https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/datastore/duckdb"
 license: Apache-2.0
 models:
   - query.ts

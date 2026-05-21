@@ -1,3 +1,4 @@
 .deno/
 *.swp
 .DS_Store
+.swamp.yaml
