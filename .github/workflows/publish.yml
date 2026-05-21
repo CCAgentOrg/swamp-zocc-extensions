@@ -25,13 +25,19 @@ jobs:
         name: Find changed manifests
         run: |
           CHANGED=""
-          if git rev-parse HEAD~1 &>/dev/null; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual trigger — publish all
+            for manifest in $(git ls-files '*/*/manifest.yaml'); do
+              dir=$(dirname "$manifest")
+              CHANGED="${CHANGED}${dir}\n"
+            done
+          elif git rev-parse HEAD~1 &>/dev/null; then
             for manifest in $(git diff --name-only --diff-filter=d HEAD~1 HEAD -- '*/*/manifest.yaml'); do
               dir=$(dirname "$manifest")
               CHANGED="${CHANGED}${dir}\n"
             done
           else
-            # Initial commit or workflow_dispatch — publish all
+            # Initial commit — publish all
             for manifest in $(git ls-files '*/*/manifest.yaml'); do
               dir=$(dirname "$manifest")
               CHANGED="${CHANGED}${dir}\n"
