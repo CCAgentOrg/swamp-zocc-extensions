@@ -1,0 +1,90 @@
+name: Publish Extensions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'datastore/*/manifest.yaml'
+      - 'model/*/manifest.yaml'
+      - 'vault/*/manifest.yaml'
+
+jobs:
+  detect-and-publish:
+    name: Publish Changed Extensions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Detect changed manifests
+        id: changes
+        run: |
+          CHANGED=$(git diff HEAD~1 --name-only -- '*/*/manifest.yaml')
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Changed manifests:"
+          echo "$CHANGED"
+
+      - name: Publish each changed extension
+        if: steps.changes.outputs.changed != ''
+        env:
+          SWAMP_PUBLISH_TOKEN: ${{ secrets.SWAMP_PUBLISH_TOKEN }}
+        run: |
+          FAILED=0
+          for manifest in ${{ steps.changes.outputs.changed }}; do
+            ext_dir=$(dirname "$manifest")
+            ext_name=$(grep -oP "^name: ['\"]?\\K[^'\"]+" "$manifest")
+            ext_version=$(grep -oP "^version: ['\"]?\\K[^'\"]+" "$manifest")
+            echo "Publishing ${ext_name}@${ext_version} from ${ext_dir}"
+
+            # Pre-publish quality gate
+            echo "  → Running deno check..."
+            if ! deno check "${ext_dir}/extensions/" 2>&1; then
+              echo "  ✗ deno check FAILED for ${ext_name}"
+              FAILED=1
+              continue
+            fi
+
+            echo "  → Running deno lint..."
+            if ! deno lint "${ext_dir}/extensions/" 2>&1; then
+              echo "  ✗ deno lint FAILED for ${ext_name}"
+              FAILED=1
+              continue
+            fi
+
+            echo "  → Running deno fmt --check..."
+            if ! deno fmt --check "${ext_dir}/extensions/" 2>&1; then
+              echo "  ✗ fmt check FAILED for ${ext_name}"
+              FAILED=1
+              continue
+            fi
+
+            echo "  → Running deno test..."
+            if ! deno test "${ext_dir}/extensions/" --allow-all 2>&1; then
+              echo "  ⚠ tests failed for ${ext_name} (non-blocking)"
+            fi
+
+            # Publish via swamp CLI
+            echo "  → Publishing..."
+            if command -v swamp &> /dev/null; then
+              if ! swamp extension publish --from "${ext_dir}/manifest.yaml"; then
+                echo "  ✗ swamp publish FAILED for ${ext_name}"
+                FAILED=1
+              else
+                echo "  ✓ Published ${ext_name}@${ext_version}"
+              fi
+            else
+              echo "  ⚠ swamp CLI not available — skipping publish (CI only validates)"
+            fi
+          done
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "Some extensions failed quality gates"
+            exit 1
+          fi

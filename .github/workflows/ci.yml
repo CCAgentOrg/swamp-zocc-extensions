@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches: [main]
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      extensions: ${{ steps.filter.outputs.changes }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            datastore/duckdb:
+              - 'datastore/duckdb/**'
+            model/extension-creator:
+              - 'model/extension-creator/**'
+            vault/sops-age:
+              - 'vault/sops-age/**'
+            ci:
+              - '.github/workflows/**'
+
+  lint-check:
+    name: Lint & Check (${{ matrix.extension }})
+    needs: changes
+    if: needs.changes.outputs.extensions != '[]' && needs.changes.outputs.extensions != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        extension: ${{ fromJson(needs.changes.outputs.extensions) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.extension }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check
+        run: deno check extensions/
+
+      - name: Lint
+        run: deno lint extensions/
+
+      - name: Format check
+        run: deno fmt --check extensions/
+
+  test:
+    name: Test (${{ matrix.extension }})
+    needs: changes
+    if: needs.changes.outputs.extensions != '[]' && needs.changes.outputs.extensions != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        extension: ${{ fromJson(needs.changes.outputs.extensions) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.extension }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run tests
+        run: deno test extensions/ --allow-all
+
+  manifest-validate:
+    name: Validate Manifests (${{ matrix.extension }})
+    needs: changes
+    if: needs.changes.outputs.extensions != '[]' && needs.changes.outputs.extensions != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        extension: ${{ fromJson(needs.changes.outputs.extensions) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.extension }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Validate manifest.yaml schema
+        run: |
+          if [ ! -f manifest.yaml ]; then
+            echo "ERROR: manifest.yaml not found in ${{ matrix.extension }}"
+            exit 1
+          fi
+          # Check required fields
+          for field in manifestVersion name version description repository license; do
+            if ! grep -q "^${field}:" manifest.yaml && ! grep -q "^${field}:" manifest.yaml; then
+              echo "ERROR: Missing required field '${field}' in manifest.yaml"
+              exit 1
+            fi
+          done
+          # Check @zocc scope
+          if ! grep -q "@zocc/" manifest.yaml; then
+            echo "ERROR: Extension name must be scoped under @zocc/"
+            exit 1
+          fi
+          echo "Manifest valid for ${{ matrix.extension }}"
+
+      - name: Check referenced files exist
+        run: |
+          EXT_DIR="${{ matrix.extension }}"
+          # Check models
+          for model in $(grep -oP '(?<=- ).*\.ts' manifest.yaml | head -20); do
+            if [ ! -f "extensions/$model" ] && [ ! -f "$model" ]; then
+              echo "WARNING: Referenced model file '$model' not found"
+            fi
+          done
+          echo "File reference check complete"

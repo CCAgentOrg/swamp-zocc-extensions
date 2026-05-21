@@ -1,0 +1,73 @@
+manifestVersion: 1
+name: '@zocc/sops-age'
+version: 2026.05.21.1
+description: >
+  SOPS + age vault for swamp: encrypt secrets at rest with AES-256-GCM via
+  Mozilla SOPS and age. Zero network dependency — fully local, file-based.
+  Works with existing SOPS workflows and zo.space secrets dashboards.
+
+  ## Setup
+
+  Generate an age keypair and SOPS-encrypted secrets file:
+
+  ```bash
+  age-keygen -o ~/.secrets/age.key
+  echo '{"MY_SECRET": "value"}' > ~/.secrets/secrets.json
+  sops --encrypt --age $(grep "Public" ~/.secrets/age.key | cut -d: -f2) \
+    --input-type json --output-type json ~/.secrets/secrets.json
+  ```
+
+  Create a vault instance:
+
+  ```bash
+  swamp vault create @cashlessconsumer/sops-age my-secrets \
+    --config '{"secretsFile":"/home/user/.secrets/secrets.json","ageKeyFile":"/home/user/.secrets/age.key","agePublicKey":"age1..."}'
+  ```
+
+  ## Usage
+
+  ```bash
+  swamp vault list-keys my-secrets --json
+  swamp vault read-secret my-secrets MY_SECRET --force
+  swamp vault put my-secrets NEW_KEY=new_value
+  ```
+
+  In workflows:
+
+  ```yaml
+  env:
+    API_KEY: ${{ vault.get(my-secrets, OPENAI_API_KEY) }}
+  ```
+
+  ## Required Tools
+
+  - `sops` CLI (https://github.com/mozilla/sops)
+  - `age` CLI (https://github.com/FiloSottile/age)
+
+repository: 'https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/vault/sops-age'
+models: []
+workflows: []
+vaults:
+  - vaults/sops-age/mod.ts
+drivers: []
+datastores: []
+reports: []
+additionalFiles:
+  - README.md
+  - LICENSE.txt
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+labels:
+  - sops
+  - age
+  - secrets
+  - vault
+  - encryption
+  - local
+  - self-hosted
+dependencies: []
+paths:
+  base: manifest
