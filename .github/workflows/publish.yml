@@ -26,7 +26,12 @@ jobs:
       - name: Detect changed manifests
         id: changes
         run: |
-          CHANGED=$(git diff HEAD~1 --name-only -- '*/*/manifest.yaml')
+          if git rev-parse HEAD~1 &>/dev/null; then
+            CHANGED=$(git diff HEAD~1 --name-only -- '*/*/manifest.yaml')
+          else
+            # Initial commit — publish all manifests
+            CHANGED=$(git ls-files '*/*/manifest.yaml')
+          fi
           echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
           echo "Changed manifests:"
           echo "$CHANGED"
