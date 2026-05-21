@@ -7,6 +7,7 @@ on:
       - 'datastore/*/manifest.yaml'
       - 'model/*/manifest.yaml'
       - 'vault/*/manifest.yaml'
+  workflow_dispatch:
 
 jobs:
   detect-and-publish:
@@ -29,7 +30,7 @@ jobs:
           if git rev-parse HEAD~1 &>/dev/null; then
             CHANGED=$(git diff HEAD~1 --name-only -- '*/*/manifest.yaml')
           else
-            # Initial commit — publish all manifests
+            # Initial commit or workflow_dispatch — publish all manifests
             CHANGED=$(git ls-files '*/*/manifest.yaml')
           fi
           echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
