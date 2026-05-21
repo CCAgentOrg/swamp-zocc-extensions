@@ -10,86 +10,99 @@ on:
   workflow_dispatch:
 
 jobs:
-  detect-and-publish:
-    name: Publish Changed Extensions
+  detect-changes:
+    name: Detect changed extensions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changes
+        name: Find changed manifests
+        run: |
+          CHANGED=""
+          if git rev-parse HEAD~1 &>/dev/null; then
+            for manifest in $(git diff --name-only --diff-filter=d HEAD~1 HEAD -- '*/*/manifest.yaml'); do
+              dir=$(dirname "$manifest")
+              CHANGED="${CHANGED}${dir}\n"
+            done
+          else
+            # Initial commit or workflow_dispatch — publish all
+            for manifest in $(git ls-files '*/*/manifest.yaml'); do
+              dir=$(dirname "$manifest")
+              CHANGED="${CHANGED}${dir}\n"
+            done
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "No changed manifests found"
+            echo "changed=" >> "$GITHUB_OUTPUT"
+          else
+            # Deduplicate and write to file for multiline safety
+            echo -e "$CHANGED" | sort -u > /tmp/changed_dirs.txt
+            echo "Changed extensions:"
+            cat /tmp/changed_dirs.txt
+            echo "changed=$(cat /tmp/changed_dirs.txt)" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    name: Publish extensions
+    needs: detect-changes
+    if: needs.detect-changes.outputs.changed != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: systeminit/setup-swamp@v0.1.0
+        with:
+          api-key: ${{ secrets.SWAMP_API_KEY }}
+      - name: Publish extensions
+        run: |
+          PUBLISHED=0
+          SKIPPED=0
+          FAILED=0
 
-    - uses: denoland/setup-deno@v2
-      with:
-        deno-version: v2.x
+          while IFS= read -r dir; do
+            [ -z "$dir" ] && continue
+            cd "$GITHUB_WORKSPACE/$dir"
 
-    - name: Detect changed manifests
-      id: changes
-      run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! git rev-parse HEAD~1 &>/dev/null; then
-          git ls-files '*/*/manifest.yaml' > /tmp/changed_manifests.txt
-        else
-          git diff HEAD~1 --name-only -- '*/*/manifest.yaml' > /tmp/changed_manifests.txt
-        fi
-        COUNT=$(wc -l < /tmp/changed_manifests.txt)
-        echo "Found ${COUNT} changed manifests:"
-        cat /tmp/changed_manifests.txt
-        echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+            NAME=$(grep '^name:' manifest.yaml | sed 's/name: *"\(.*\)"/\1/')
+            LOCAL=$(grep '^version:' manifest.yaml | sed 's/version: *"\(.*\)"/\1/')
+            UPSTREAM=$(swamp extension version "$NAME" --json 2>/dev/null | jq -r '.currentPublished // empty' || true)
 
-    - name: Publish each changed extension
-      if: steps.changes.outputs.count != '0'
-      env:
-        SWAMP_PUBLISH_TOKEN: ${{ secrets.SWAMP_PUBLISH_TOKEN }}
-      run: |
-        FAILED=0
-        while IFS= read -r manifest; do
-          [ -z "$manifest" ] && continue
-          ext_dir=$(dirname "$manifest")
-          ext_name=$(grep -oP "^name: ['\"]?\K[^'\"]+" "$manifest")
-          ext_version=$(grep -oP "^version: ['\"]?\K[^'\"]+" "$manifest")
-          echo "Publishing ${ext_name}@${ext_version} from ${ext_dir}"
-
-          echo "  → Running deno check..."
-          if ! deno check "${ext_dir}/extensions/" 2>&1; then
-            echo "  ✗ deno check FAILED for ${ext_name}"
-            FAILED=1
-            continue
-          fi
-
-          echo "  → Running deno lint..."
-          if ! deno lint "${ext_dir}/extensions/" 2>&1; then
-            echo "  ✗ deno lint FAILED for ${ext_name}"
-            FAILED=1
-            continue
-          fi
-
-          echo "  → Running deno fmt --check..."
-          if ! deno fmt --check "${ext_dir}/extensions/" 2>&1; then
-            echo "  ✗ fmt check FAILED for ${ext_name}"
-            FAILED=1
-            continue
-          fi
-
-          echo "  → Running deno test..."
-          if ! deno test "${ext_dir}/extensions/" --allow-all 2>&1; then
-            echo "  ⚠ tests failed for ${ext_name} (non-blocking)"
-          fi
-
-          echo "  → Publishing..."
-          if command -v swamp &> /dev/null; then
-            if ! swamp extension publish --from "${ext_dir}/manifest.yaml"; then
-              echo "  ✗ swamp publish FAILED for ${ext_name}"
-              FAILED=1
-            else
-              echo "  ✓ Published ${ext_name}@${ext_version}"
+            if [ "$LOCAL" = "$UPSTREAM" ]; then
+              echo "skip: $NAME ($LOCAL) already published"
+              SKIPPED=$((SKIPPED + 1))
+              continue
             fi
-          else
-            echo "  ⚠ swamp CLI not available — quality gate passed, publish skipped"
-          fi
-        done < /tmp/changed_manifests.txt
 
-        if [ "$FAILED" -gt 0 ]; then
-          echo "Some extensions failed quality gates"
-          exit 1
-        fi
+            # Ensure swamp repo marker exists
+            if [ ! -f .swamp.yaml ]; then
+              swamp repo init --quiet --tool none
+            fi
+
+            echo "Publishing $NAME ($LOCAL)..."
+            if swamp extension push manifest.yaml --yes 2>&1; then
+              PUBLISHED=$((PUBLISHED + 1))
+              echo "✓ Published $NAME@$LOCAL"
+            else
+              echo "✗ Failed to publish $NAME"
+              FAILED=$((FAILED + 1))
+            fi
+
+            sleep 1
+          done < /tmp/changed_dirs.txt
+
+          echo ""
+          echo "Results: $PUBLISHED published, $SKIPPED skipped, $FAILED failed"
+
+          if [ "$FAILED" -gt 0 ]; then
+            exit 1
+          fi
