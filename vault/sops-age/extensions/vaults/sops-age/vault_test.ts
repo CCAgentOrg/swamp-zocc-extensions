@@ -6,6 +6,7 @@ import {
   assertVaultConformance,
   assertVaultExportConformance,
   withMockedCommand,
+  // deno-lint-ignore no-unversioned-import
 } from "jsr:@systeminit/swamp-testing";
 import { SopsAgeVaultProvider as _SopsAgeVaultProvider, vault } from "./mod.ts";
 
