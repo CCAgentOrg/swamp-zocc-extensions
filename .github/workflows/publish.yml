@@ -62,7 +62,7 @@ jobs:
           fetch-depth: 0
       - uses: systeminit/setup-swamp@v0.1.0
         with:
-          api-key: ${{ secrets.SWAMP_API_KEY }}
+          api-key: ${{ secrets.SWAMP_PUBLISH_TOKEN }}
       - name: Publish extensions
         run: |
           PUBLISHED=0
