@@ -10,56 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  detect-changes:
-    name: Detect changed extensions
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      changed: ${{ steps.changes.outputs.changed }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: changes
-        name: Find changed manifests
-        run: |
-          CHANGED=""
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # Manual trigger — publish all
-            for manifest in $(git ls-files '*/*/manifest.yaml'); do
-              dir=$(dirname "$manifest")
-              CHANGED="${CHANGED}${dir}\n"
-            done
-          elif git rev-parse HEAD~1 &>/dev/null; then
-            for manifest in $(git diff --name-only --diff-filter=d HEAD~1 HEAD -- '*/*/manifest.yaml'); do
-              dir=$(dirname "$manifest")
-              CHANGED="${CHANGED}${dir}\n"
-            done
-          else
-            # Initial commit — publish all
-            for manifest in $(git ls-files '*/*/manifest.yaml'); do
-              dir=$(dirname "$manifest")
-              CHANGED="${CHANGED}${dir}\n"
-            done
-          fi
-
-          if [ -z "$CHANGED" ]; then
-            echo "No changed manifests found"
-            echo "changed=" >> "$GITHUB_OUTPUT"
-          else
-            # Deduplicate and write to file for multiline safety
-            echo -e "$CHANGED" | sort -u > /tmp/changed_dirs.txt
-            echo "Changed extensions:"
-            cat /tmp/changed_dirs.txt
-            echo "changed<<DIRLIST" >> "$GITHUB_OUTPUT"
-            cat /tmp/changed_dirs.txt >> "$GITHUB_OUTPUT"
-            echo "DIRLIST" >> "$GITHUB_OUTPUT"
-
   publish:
     name: Publish extensions
-    needs: detect-changes
-    if: needs.detect-changes.outputs.changed != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,16 +24,34 @@ jobs:
           api-key: ${{ secrets.SWAMP_PUBLISH_TOKEN }}
       - name: Publish extensions
         run: |
+          # Determine which extensions to publish
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            MANIFESTS=$(git ls-files '*/*/manifest.yaml')
+          elif git rev-parse HEAD~1 &>/dev/null; then
+            MANIFESTS=$(git diff --name-only --diff-filter=d HEAD~1 HEAD -- '*/*/manifest.yaml')
+          else
+            MANIFESTS=$(git ls-files '*/*/manifest.yaml')
+          fi
+
+          if [ -z "$MANIFESTS" ]; then
+            echo "No changed manifests found"
+            exit 0
+          fi
+
+          echo "Extensions to process:"
+          echo "$MANIFESTS"
+          echo ""
+
           PUBLISHED=0
           SKIPPED=0
           FAILED=0
 
-          while IFS= read -r dir; do
-            [ -z "$dir" ] && continue
+          for manifest in $MANIFESTS; do
+            dir=$(dirname "$manifest")
             cd "$GITHUB_WORKSPACE/$dir"
 
-            NAME=$(grep '^name:' manifest.yaml | sed 's/name: *"\(.*\)"/\1/')
-            LOCAL=$(grep '^version:' manifest.yaml | sed 's/version: *"\(.*\)"/\1/')
+            NAME=$(grep '^name:' manifest.yaml | head -1 | sed 's/name:[[:space:]]*"\(.*\)"/\1/; s/name:[[:space:]]*\(.*\)/\1/')
+            LOCAL=$(grep '^version:' manifest.yaml | head -1 | sed 's/version:[[:space:]]*"\(.*\)"/\1/; s/version:[[:space:]]*\(.*\)/\1/')
             UPSTREAM=$(swamp extension version "$NAME" --json 2>/dev/null | jq -r '.currentPublished // empty' || true)
 
             if [ "$LOCAL" = "$UPSTREAM" ]; then
@@ -90,7 +60,6 @@ jobs:
               continue
             fi
 
-            # Ensure swamp repo marker exists
             if [ ! -f .swamp.yaml ]; then
               swamp repo init --quiet --tool none
             fi
@@ -98,14 +67,14 @@ jobs:
             echo "Publishing $NAME ($LOCAL)..."
             if swamp extension push manifest.yaml --yes 2>&1; then
               PUBLISHED=$((PUBLISHED + 1))
-              echo "✓ Published $NAME@$LOCAL"
+              echo "=> Published $NAME@$LOCAL"
             else
-              echo "✗ Failed to publish $NAME"
+              echo "=> Failed to publish $NAME"
               FAILED=$((FAILED + 1))
             fi
 
             sleep 1
-          done < /tmp/changed_dirs.txt
+          done
 
           echo ""
           echo "Results: $PUBLISHED published, $SKIPPED skipped, $FAILED failed"
