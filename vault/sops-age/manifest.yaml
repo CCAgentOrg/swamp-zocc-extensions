@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@zocc/sops-age"
-version: 2026.05.21.1
+version: 2026.05.21.2
 description: >
   SOPS + age vault for swamp: encrypt secrets at rest with AES-256-GCM via
   Mozilla SOPS and age. Zero network dependency — fully local, file-based.
@@ -48,7 +48,7 @@ repository: "https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/vault
 models: []
 workflows: []
 vaults:
-  - vaults/sops-age/mod.ts
+  - sops_age/mod.ts
 drivers: []
 datastores: []
 reports: []

@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@zocc/duckdb"
-version: 2026.05.21.7
+version: 2026.05.21.8
 paths:
   base: manifest
 description: >
@@ -48,7 +48,7 @@ workflows: []
 vaults: []
 drivers: []
 datastores:
-  - datastores/duckdb_datastore/mod.ts
+  - duckdb_datastore/mod.ts
 reports: []
 additionalFiles:
   - README.md

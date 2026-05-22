@@ -11,3 +11,5 @@ secrets.json
 # Local extension sources (developer-specific, not shared)
 .swamp-sources.yaml
 # END swamp managed section
+.swamp/
+.swamp.yaml
