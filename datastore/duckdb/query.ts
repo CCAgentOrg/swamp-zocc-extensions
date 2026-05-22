@@ -209,7 +209,7 @@ type ModelContext = {
  */
 export const model = {
   type: "@zocc/duckdb",
-  version: "2026.05.21.7",
+  version: "2026.05.22.1",
   globalArguments: GlobalArgsSchema,
 
   resources: {
@@ -324,7 +324,10 @@ export const model = {
         let truncated = false;
         let truncatedAt: number | undefined;
 
-        if (args.limit > 0 && !sql.toUpperCase().includes("LIMIT")) {
+        if (
+          args.limit > 0 && !sql.toUpperCase().includes("LIMIT") &&
+          /^SELECT\b/i.test(sql)
+        ) {
           sql += ` LIMIT ${args.limit}`;
           truncatedAt = args.limit;
         }
@@ -661,14 +664,23 @@ export const model = {
           }
         }
 
-        const { stdout, success, stderr } = await runDuckDB(args.database, sql);
+        const { success, stderr } = await runDuckDB(args.database, sql);
         const durationMs = Math.round(performance.now() - start);
 
         if (!success) {
           throw new Error(`Export failed: ${stderr}`);
         }
 
-        const rowsExported = Number(stdout.trim() || 0);
+        // DuckDB COPY does not output row count to stdout; count separately
+        let rowsExported = 0;
+        const countSql = `SELECT COUNT(*) AS cnt FROM (${query})`;
+        const countResult = await runDuckDB(args.database, countSql);
+        if (countResult.success) {
+          const countLines = countResult.stdout.trim().split("\n");
+          if (countLines.length >= 2) {
+            rowsExported = parseInt(countLines[1].trim(), 10) || 0;
+          }
+        }
         let fileSize = 0;
 
         try {

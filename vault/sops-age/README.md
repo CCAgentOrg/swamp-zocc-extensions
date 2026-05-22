@@ -54,10 +54,10 @@ decrypt it.
 
 ```bash
 # Install the extension
-swamp extension pull @cashlessconsumer/sops-age
+swamp extension pull @zocc/sops-age
 
 # Create a vault instance
-swamp vault create @cashlessconsumer/sops-age prod \
+swamp vault create @zocc/sops-age prod \
   --config '{
     "secretsFile": "/home/user/.secrets/secrets.json",
     "ageKeyFile": "/home/user/.secrets/age.key",
@@ -71,7 +71,7 @@ swamp vault create @cashlessconsumer/sops-age prod \
 version: 1
 models:
   - name: fetch-data
-    type: "@cashlessconsumer/duckdb"
+    type: "@zocc/duckdb"
     method: import_data
     arguments:
       database: "./data/app.duckdb"
@@ -81,7 +81,7 @@ models:
       API_KEY: ${{ vault.get(prod, API_KEY) }}
 
   - name: publish-report
-    type: "@cashlessconsumer/duckdb"
+    type: "@zocc/duckdb"
     method: export_data
     dependsOn:
       - fetch-data

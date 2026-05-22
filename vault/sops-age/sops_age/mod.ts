@@ -1,7 +1,7 @@
 // SOPS + age Vault Extension for Swamp
 // SPDX-License-Identifier: Apache-2.0
 
-import { z } from "npm:zod@4";
+import { z } from "npm:zod@4.3.6";
 
 /** Configuration schema for the SOPS + age vault provider. */
 const ConfigSchema = z.object({
@@ -146,7 +146,7 @@ export class SopsAgeVaultProvider {
  *
  * @example
  * ```bash
- * swamp vault create @cashlessconsumer/sops-age prod \
+ * swamp vault create @zocc/sops-age prod \
  *   --config '{"secretsFile":"/data/secrets.json","ageKeyFile":"/data/age.key","agePublicKey":"age1..."}'
  *
  * swamp vault list-keys prod --json

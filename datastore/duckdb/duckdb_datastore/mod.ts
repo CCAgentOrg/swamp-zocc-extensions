@@ -125,7 +125,7 @@ function createDuckDBLock(
   const retryIntervalMs = options?.retryIntervalMs ?? 1_000;
   const maxWaitMs = options?.maxWaitMs ?? 60_000;
   let nonce: string | undefined;
-  let heartbeatId: number | undefined;
+  let heartbeatId: ReturnType<typeof setInterval> | undefined;
 
   function esc(value: string): string {
     return value.replace(/'/g, "''");

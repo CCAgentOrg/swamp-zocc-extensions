@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@zocc/sops-age"
-version: 2026.05.21.2
+version: 2026.05.22.1
 description: >
   SOPS + age vault for swamp: encrypt secrets at rest with AES-256-GCM via
   Mozilla SOPS and age. Zero network dependency — fully local, file-based.
@@ -20,7 +20,7 @@ description: >
   Create a vault instance:
 
   ```bash
-  swamp vault create @cashlessconsumer/sops-age my-secrets \
+  swamp vault create @zocc/sops-age my-secrets \
     --config '{"secretsFile":"/home/user/.secrets/secrets.json","ageKeyFile":"/home/user/.secrets/age.key","agePublicKey":"age1..."}'
   ```
 

@@ -1,6 +1,6 @@
 manifestVersion: 1
 name: "@zocc/duckdb"
-version: 2026.05.21.8
+version: 2026.05.22.1
 paths:
   base: manifest
 description: >
@@ -27,14 +27,14 @@ description: >
   ```yaml
   # .swamp.yaml
   datastore:
-    type: "@zocc/duckdb"
+    type: "@zocc/duckdb-datastore"
     config:
       database: "/path/to/swamp.duckdb"
       schema: "swamp"
   ```
 
   ```bash
-  export SWAMP_DATASTORE='@zocc/duckdb:{"database":"/data/swamp.duckdb"}'
+  export SWAMP_DATASTORE='@zocc/duckdb-datastore:{"database":"/data/swamp.duckdb"}'
   ```
 
   ## Required Tools

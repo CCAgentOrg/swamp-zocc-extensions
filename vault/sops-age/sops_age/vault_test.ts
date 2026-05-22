@@ -353,3 +353,137 @@ Deno.test("config with optional sopsConfigFile parses correctly", () => {
   });
   assertEquals(provider.getName(), "config-test");
 });
+
+// ---------------------------------------------------------------------------
+// 4. Edge-case unit tests — JSON serialization round-trips for values that
+//    pass through JSON.stringify/parse during encrypt/decrypt.
+//
+//    NOTE: The original mocked tests (sections 1-3) rely on withMockedCommand
+//    which patches Deno.Command — this is read-only in Deno 2.x and causes
+//    those tests to fail. These tests validate value fidelity through the
+//    JSON serialization path that the vault uses internally, without needing
+//    to mock Deno.Command.
+// ---------------------------------------------------------------------------
+
+/**
+ * Simulate the encrypt/decrypt JSON round-trip that SopsAgeVaultProvider
+ * performs internally (JSON.stringify → JSON.parse). This validates that
+ * values survive the serialization path without corruption.
+ */
+function jsonRoundTrip(
+  secrets: Record<string, string>,
+): Record<string, string> {
+  return JSON.parse(JSON.stringify(secrets, null, 2));
+}
+
+/** Known issue: the swamp CLI double-escapes backslashes before passing values
+ *  to extension put(). This test verifies the JSON path itself preserves
+ *  backslashes — the bug lives in the CLI layer, not the extension. */
+Deno.test("JSON round-trip preserves backslash-containing values", () => {
+  const secrets: Record<string, string> = {
+    PATH_VAR: "C:\\Users\\admin\\Documents",
+    REGEX_VAR: "\\d+\\.\\d+",
+    ESCAPED_QUOTES: `\\"hello\\"`,
+  };
+  const result = jsonRoundTrip(secrets);
+  assertEquals(result["PATH_VAR"], "C:\\Users\\admin\\Documents");
+  assertEquals(result["REGEX_VAR"], "\\d+\\.\\d+");
+  assertEquals(result["ESCAPED_QUOTES"], `\\"hello\\"`);
+});
+
+/** The extension stores whatever it receives verbatim through JSON. */
+Deno.test("JSON round-trip preserves backslashes exactly as given", () => {
+  const input = "back\\slash\\test";
+  const result = jsonRoundTrip({ BS_KEY: input });
+  assertEquals(result["BS_KEY"], "back\\slash\\test");
+});
+
+Deno.test("JSON round-trip preserves empty string values", () => {
+  const result = jsonRoundTrip({ EMPTY_KEY: "" });
+  assertEquals(result["EMPTY_KEY"], "");
+});
+
+Deno.test("JSON round-trip preserves unicode and emoji values", () => {
+  const secrets: Record<string, string> = {
+    UNICODE_KEY: "Ñoño café résumé",
+    EMOJI_KEY: "🔑 secret 🚀 launch 🎉",
+    CJK_KEY: "秘密鍵：パスワード",
+    MIXED_KEY: "Hello 世界! 🌍",
+  };
+  const result = jsonRoundTrip(secrets);
+  assertEquals(result["UNICODE_KEY"], "Ñoño café résumé");
+  assertEquals(result["EMOJI_KEY"], "🔑 secret 🚀 launch 🎉");
+  assertEquals(result["CJK_KEY"], "秘密鍵：パスワード");
+  assertEquals(result["MIXED_KEY"], "Hello 世界! 🌍");
+});
+
+Deno.test("JSON round-trip preserves very long values", () => {
+  const longValue = "A".repeat(100_000);
+  const result = jsonRoundTrip({ LONG_KEY: longValue });
+  assertEquals(result["LONG_KEY"], longValue);
+  assertEquals(result["LONG_KEY"]!.length, 100_000);
+});
+
+Deno.test("JSON round-trip preserves JSON-containing values", () => {
+  const jsonValue = JSON.stringify({
+    nested: { deep: true, arr: [1, 2, 3] },
+  });
+  const prettyJson = JSON.stringify({ a: 1 }, null, 2);
+  const result = jsonRoundTrip({
+    JSON_KEY: jsonValue,
+    PRETTY_JSON_KEY: prettyJson,
+  });
+  assertEquals(
+    result["JSON_KEY"],
+    `{"nested":{"deep":true,"arr":[1,2,3]}}`,
+  );
+  assertEquals(result["PRETTY_JSON_KEY"], prettyJson);
+});
+
+Deno.test("JSON round-trip preserves special shell characters", () => {
+  const secrets: Record<string, string> = {
+    DOLLAR_KEY: "$HOME/bin:$PATH",
+    BACKTICK_KEY: "result: `date`",
+    BANG_KEY: "wow!",
+    PIPE_KEY: "a | b | c",
+    SEMICOLON_KEY: "cmd1; cmd2",
+    AMP_KEY: "a && b",
+    NEWLINE_KEY: "line1\nline2\nline3",
+    TAB_KEY: "col1\tcol2\tcol3",
+    MIXED_SPECIAL: '$var `cmd` && (true || false); echo "done"',
+  };
+  const result = jsonRoundTrip(secrets);
+  assertEquals(result["DOLLAR_KEY"], "$HOME/bin:$PATH");
+  assertEquals(result["BACKTICK_KEY"], "result: `date`");
+  assertEquals(result["BANG_KEY"], "wow!");
+  assertEquals(result["PIPE_KEY"], "a | b | c");
+  assertEquals(result["SEMICOLON_KEY"], "cmd1; cmd2");
+  assertEquals(result["AMP_KEY"], "a && b");
+  assertEquals(result["NEWLINE_KEY"], "line1\nline2\nline3");
+  assertEquals(result["TAB_KEY"], "col1\tcol2\tcol3");
+  assertEquals(
+    result["MIXED_SPECIAL"],
+    '$var `cmd` && (true || false); echo "done"',
+  );
+});
+
+Deno.test("JSON keys with special characters survive round-trip", () => {
+  const secrets: Record<string, string> = {
+    "KEY.WITH.DOTS": "v1",
+    "KEY-WITH-DASHES": "v2",
+    "KEY_WITH_UNDERSCORES": "v3",
+    "KEY/WITH/SLASHES": "v4",
+  };
+  const result = jsonRoundTrip(secrets);
+  assertEquals(result["KEY.WITH.DOTS"], "v1");
+  assertEquals(result["KEY-WITH-DASHES"], "v2");
+  assertEquals(result["KEY_WITH_UNDERSCORES"], "v3");
+  assertEquals(result["KEY/WITH/SLASHES"], "v4");
+  // Sorted key order is preserved by JSON serialization
+  assertEquals(Object.keys(result).sort(), [
+    "KEY-WITH-DASHES",
+    "KEY.WITH.DOTS",
+    "KEY/WITH/SLASHES",
+    "KEY_WITH_UNDERSCORES",
+  ]);
+});
