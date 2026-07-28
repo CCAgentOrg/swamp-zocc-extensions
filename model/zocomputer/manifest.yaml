@@ -1,0 +1,30 @@
+manifestVersion: 1
+name: "@zocc/zocomputer"
+version: "2026.07.29.1"
+paths:
+  base: manifest
+description: >
+  Zo Computer MCP + Ask: access every Zo tool (89+ tools) via MCP JSON-RPC
+  and Zo's conversational AI via /zo/ask — all through a single swamp model.
+  Includes convenience wrappers for web_search, read_file, generate_image,
+  and full generic mcp_call_tool for any tool in the Zo surface.
+repository: "https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/model/zocomputer"
+additionalFiles:
+  - README.md
+  - LICENSE.md
+models:
+  - mod.ts
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+labels:
+  - zo
+  - mcp
+  - ai
+  - automation
+  - ask
+  - computer
+  - client
+dependencies: []

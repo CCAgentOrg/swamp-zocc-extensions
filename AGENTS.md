@@ -34,6 +34,7 @@ This repo is **factory mode only**. Manual-scope extensions go in separate repos
 | `datastore/duckdb` | model + datastore | `@zocc/duckdb` | Published |
 | `model/extension-creator` | model | `@zocc/swamp-extension-creator` | Published |
 | `vault/sops-age` | vault | `@zocc/sops-age` | Published |
+| `model/zocomputer` | model | `@zocc/zocomputer` | Ready to publish |
 
 ## CI
 

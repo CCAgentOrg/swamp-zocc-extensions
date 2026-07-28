@@ -1,0 +1,67 @@
+manifestVersion: 1
+name: '@zocc/duckdb'
+version: 2026.05.21.4
+paths:
+  base: manifest
+description: >
+  DuckDB integration for swamp: query model for ad-hoc SQL, and a datastore
+  backend that stores swamp runtime data in a DuckDB database file with
+  row-based distributed locking. Embedded, local-only — no network dependency.
+
+  ## Model
+
+  Run SQL queries against local DuckDB databases, list tables, inspect
+  schemas, and export query results as structured data resources.
+
+  ```bash
+  swamp model create @zocc/duckdb mydb
+  swamp model method run mydb list_tables --input database=/path/to/data.duckdb
+  swamp model method run mydb query --input database=/path/to/data.duckdb --input sql="SELECT * FROM t LIMIT 10"
+  swamp model method run mydb summarize --input database=/path/to/data.duckdb
+  ```
+
+  ## Datastore
+
+  Use DuckDB as the storage backend for swamp runtime data.
+
+  ```yaml
+  # .swamp.yaml
+  datastore:
+    type: "@zocc/duckdb"
+    config:
+      database: "/path/to/swamp.duckdb"
+      schema: "swamp"
+  ```
+
+  ```bash
+  export SWAMP_DATASTORE='@zocc/duckdb:{"database":"/data/swamp.duckdb"}'
+  ```
+
+  ## Required Tools
+
+  - `duckdb` CLI (https://duckdb.org/)
+repository: 'https://github.com/CCAgentOrg/swamp-duckdb'
+models:
+  - query.ts
+workflows: []
+vaults: []
+drivers: []
+datastores:
+  - datastores/duckdb_datastore/mod.ts
+reports: []
+additionalFiles:
+  - README.md
+  - LICENSE.md
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+labels:
+  - duckdb
+  - database
+  - sql
+  - analytics
+  - data
+  - datastore
+dependencies: []
