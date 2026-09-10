@@ -56,20 +56,6 @@ const ClaimSchema = z.object({
   evidenceCount: z.number(),
 });
 
-
-
-
-
-const AssertionCheckSchema = z.object({
-  field: z.string(),
-  asserted: z.string().nullable(),
-  observed: z.string().nullable(),
-  verdict: z.enum(["match", "mismatch", "partial", "unverifiable"]),
-});
-
-
-
-
 const ReportResultSchema = z.object({
   bench: z.string(),
   incident: z.string().nullable(),
