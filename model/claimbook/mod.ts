@@ -257,7 +257,7 @@ CREATE TABLE IF NOT EXISTS inventory_files(
 
 export const model = {
   type: "@zocc/claimbook",
-  version: "2026.09.10.1",
+  version: "2026.09.10.2",
   globalArguments: GlobalArgsSchema,
 
   resources: {
@@ -430,9 +430,11 @@ export const model = {
         for (const [id, asserted] of parseCsvRows(claims.stdout)) {
           const ev = await runDuckDB(
             args.bench,
-            `SELECT artifact_type FROM evidence WHERE claim_id=${id};`,
+            `SELECT artifact_type, confidence FROM evidence WHERE claim_id=${id};`,
           );
-          const types = parseCsvRows(ev.stdout).map((r) => r[0]);
+          const types = parseCsvRows(ev.stdout)
+            .filter((r) => (r[1] ?? "").replace(/^"|"$/g, "") !== "low")
+            .map((r) => r[0]);
           const { level, basis } = deriveLevel(types);
           results.push({
             claimId: Number(id),
@@ -797,12 +799,14 @@ export const model = {
           const count = Number(parseCsvRows(ev.stdout)[0]?.[0] ?? 0);
           const typesRaw = count === 0 ? "" : (await runDuckDB(
             args.bench,
-            `SELECT artifact_type FROM evidence WHERE claim_id=${row[0]};`,
+            `SELECT artifact_type, confidence FROM evidence WHERE claim_id=${
+              row[0]
+            };`,
           )).stdout;
           const { level } = deriveLevel(
-            typesRaw.trim().split("\n").filter(Boolean).map((l: string) =>
-              l.replace(/^"|"$/g, "")
-            ),
+            parseCsvRows(typesRaw)
+              .filter((r) => (r[1] ?? "").replace(/^"|"$/g, "") !== "low")
+              .map((r) => r[0]),
           );
           const assertedAt = row[6] && row[6] !== "" ? row[6] : null;
           const olderThan14d = assertedAt
