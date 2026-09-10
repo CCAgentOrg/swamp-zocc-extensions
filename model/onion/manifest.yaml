@@ -1,0 +1,32 @@
+manifestVersion: 1
+name: "@zocc/onion"
+version: "2026.09.10.1"
+paths:
+  base: manifest
+description: >
+  Tor onion-service observability model: bootstrap a persistent Tor daemon,
+  probe onion endpoints, capture sha256-attributed evidence snapshots, crawl
+  dump-inventory listings (filebrowser HTML or enumeration JSON) with
+  PII-bearing filename masking. Network layer of the breach-verification bench.
+repository: "https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/model/onion"
+additionalFiles:
+  - README.md
+  - LICENSE.md
+models:
+  - mod.ts
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+labels:
+  - tor
+  - onion
+  - darkweb
+  - breach
+  - osint
+  - security
+  - monitoring
+  - evidence
+  - PII-masking
+dependencies: []

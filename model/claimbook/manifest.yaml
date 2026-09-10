@@ -1,0 +1,32 @@
+manifestVersion: 1
+name: "@zocc/claimbook"
+version: "2026.09.10.1"
+paths:
+  base: manifest
+description: >
+  Breach-claim ledger and verification state machine on DuckDB. Files claims
+  with asserted levels (L0 rumor → L5 published), attaches sha256-attributed
+  evidence, reconciles asserted dump profiles against observed inventories,
+  records public statements, tracks onion watch-state diffs, and emits
+  verification reports. Persistence layer of the breach-verification bench.
+repository: "https://github.com/CCAgentOrg/swamp-zocc-extensions/tree/main/model/claimbook"
+additionalFiles:
+  - README.md
+  - LICENSE.md
+models:
+  - mod.ts
+platforms:
+  - linux-x86_64
+  - linux-aarch64
+  - darwin-x86_64
+  - darwin-aarch64
+labels:
+  - breach
+  - verification
+  - claims
+  - evidence
+  - osint
+  - security
+  - duckdb
+  - journalism
+dependencies: []
