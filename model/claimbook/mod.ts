@@ -56,30 +56,9 @@ const ClaimSchema = z.object({
   evidenceCount: z.number(),
 });
 
-const InitResultSchema = z.object({
-  bench: z.string(),
-  tables: z.array(z.string()),
-});
 
-const ClaimResultSchema = z.object({
-  claimId: z.number(),
-  incident: z.string(),
-  level: z.string(),
-});
 
-const EvidenceResultSchema = z.object({
-  evidenceId: z.number(),
-  claimId: z.number(),
-  artifactType: z.string(),
-});
 
-const ScoreResultSchema = z.object({
-  claimId: z.number(),
-  assertedLevel: z.string(),
-  verifiedLevel: z.string(),
-  basis: z.array(z.string()),
-  evidenceCount: z.number(),
-});
 
 const AssertionCheckSchema = z.object({
   field: z.string(),
@@ -88,35 +67,8 @@ const AssertionCheckSchema = z.object({
   verdict: z.enum(["match", "mismatch", "partial", "unverifiable"]),
 });
 
-const ReconcileResultSchema = z.object({
-  claimId: z.number(),
-  verdicts: z.array(AssertionCheckSchema),
-  overall: z.enum(["consistent", "partial", "inconsistent", "inconclusive"]),
-});
 
-const SnapshotResultSchema = z.object({
-  snapshotId: z.number(),
-  sha256: z.string().nullable(),
-  bytes: z.number().nullable(),
-});
 
-const StateResultSchema = z.object({
-  changed: z.boolean(),
-  previous: z
-    .object({
-      status: z.string(),
-      httpCode: z.number().nullable(),
-      bytes: z.number().nullable(),
-      checkedAt: z.string(),
-    })
-    .nullable(),
-  current: z.object({
-    status: z.string(),
-    httpCode: z.number().nullable(),
-    bytes: z.number().nullable(),
-    checkedAt: z.string(),
-  }),
-});
 
 const ReportResultSchema = z.object({
   bench: z.string(),
